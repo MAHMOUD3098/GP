@@ -52,9 +52,9 @@ def train_epoch(epoch, args, model, loader, criterion, optimizer):
         loss.backward()
         optimizer.step()
         print("Epoch: {:d} Batch: {:d} ({:d}) Train Loss: {:.6f}".format(
-            epoch, batch_idx, args.batch_size, loss.data[0]))
+            epoch, batch_idx, args.batch_size, loss.data))
         sys.stdout.flush()
-        batch_losses.append(loss.data[0])
+        batch_losses.append(loss.data)
     train_loss = np.mean(batch_losses)
     print("Training Loss: {:.6f}".format(train_loss))
     return train_loss

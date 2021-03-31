@@ -42,7 +42,7 @@ def get_parser():
 class Dataset(data.Dataset):
     def __init__(self, args, data_split):
         super(Dataset, self).__init__()
-
+        tag = ''
         if args.tag:
             tag = "_"+args.tag
         df = pd.read_csv(os.path.join("data/%s%s.csv" % (data_split, tag)))
@@ -54,7 +54,7 @@ class Dataset(data.Dataset):
         self.img_paths = df["Path"].tolist()
         self.pathologies = [col for col in df.columns.values if col != "Path"]
 
-        self.labels = df[self.pathologies].as_matrix().astype(int)
+        self.labels = df[self.pathologies].values.astype(int)
 
         self.n_classes = self.labels.shape[1]
 
