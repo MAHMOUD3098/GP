@@ -55,7 +55,7 @@ def train_epoch(epoch, args, model, loader, criterion, optimizer):
             epoch, batch_idx, args.batch_size, loss.data))
         sys.stdout.flush()
         batch_losses.append(loss.data)
-    train_loss = np.mean(batch_losses)
+    train_loss = torch.mean(torch.stack(batch_losses))
     print("Training Loss: {:.6f}".format(train_loss))
     return train_loss
 
@@ -74,10 +74,10 @@ def test_epoch(model, loader, criterion, epoch=1):
         inputs, labels = transform_data(data, True, train=False)
         outputs = model(inputs)
         loss = criterion(outputs, labels, epoch=epoch)
-        test_losses.append(loss.data[0])
+        test_losses.append(loss.data)
         out = torch.sigmoid(outputs).data.cpu().numpy()
         outs.extend(out)
-    avg_loss = np.mean(test_losses)
+    avg_loss = torch.mean(torch.stack(test_losses))
     print("Validation Loss: {:.6f}".format(avg_loss))
     outs = np.array(outs)
     gts = np.array(gts)
