@@ -70,7 +70,7 @@ def optimal_threshold_compute(labels, probs):
     thresholds = []
     for i in range(probs.shape[1]):
         p, r, t = metrics.precision_recall_curve(labels[:, i], probs[:, i])
-        threshold = t[np.nanargmax(2 * p * r / (p + r))]
+        threshold = t[np.nanargmax(2 * p * r / (p + r))-1]
         thresholds.append(threshold)
     thresholds = np.array(thresholds)
     print("Optimal thresholds at ", thresholds)
@@ -86,9 +86,10 @@ def predict_for_split(args_dicts, model_paths, split):
 
     if 'valid' in split:
         thresholds = optimal_threshold_compute(labels, probs)
-        auc = metrics.roc_auc_score(labels, probs)
-        print("AUC", auc)
-        name = str(auc) + '-' + split
+#        auc = metrics.roc_auc_score(labels, probs)
+#        print("AUC", auc)
+        name = 'auc - ' + split 
+#        name = str(auc) + '-' + split
     else:
         name = split
         thresholds = None
@@ -99,8 +100,9 @@ def predict_for_split(args_dicts, model_paths, split):
 def predict(model_paths, split="valid", save=True):
 
     def get_model_params(model_path):
-        params = json.load(open(
-            os.path.dirname(model_path) + '/params.txt', 'r'))
+        os.chdir('/content/GP/run_dir')
+        params = json.load(open('params.txt', 'r'))
+        os.chdir('/content/GP')        
         return params
 
     model_args_dicts = [get_model_params(model_path) for model_path in model_paths]

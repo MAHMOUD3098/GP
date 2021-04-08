@@ -150,13 +150,14 @@ def run(args):
             best_loss = valid_loss
             best_model_wts = model.state_dict()
             counter = 0
+            torch.save(best_model_wts, os.path.join('/content/GP', args.model))            
         else:
             counter += 1
 
         if counter > 3:
             break
 
-        torch.save(best_model_wts, os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
+        
 
     print("Best Validation Loss:", best_loss)
 
