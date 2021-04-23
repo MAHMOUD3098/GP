@@ -19,6 +19,7 @@ from densenet import densenet121
 
 import util
 
+import shutil
 
 class DenseNet(nn.Module):
     def __init__(self, config, nclasses):
@@ -156,7 +157,8 @@ def run(args):
         if counter > 3:
             break
 
-		torch.save(best_model_wts, os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))            
+        torch.save(best_model_wts, os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
+        # shutil.copy('/content/GP/run_dir/{0}'.format(best_model_wts), '/content/drive/MyDrive/Epochs')
 
 
         
