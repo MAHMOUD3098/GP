@@ -21,6 +21,7 @@ import util
 
 import shutil
 
+
 class DenseNet(nn.Module):
     def __init__(self, config, nclasses):
         super(DenseNet, self).__init__()
@@ -28,8 +29,10 @@ class DenseNet(nn.Module):
         num_ftrs = self.model_ft.classifier.in_features
         self.model_ft.classifier = nn.Linear(num_ftrs, nclasses)
         self.config = config
+
     def forward(self, x):
         return self.model_ft(x)
+
 
 def transform_data(data, use_gpu, train=False):
     inputs, labels = data
@@ -86,7 +89,6 @@ def test_epoch(model, loader, criterion, epoch=1):
 
 
 def get_loss(dataset, weighted):
-
     criterion = nn.MultiLabelSoftMarginLoss()
 
     def loss(preds, target, epoch):
@@ -103,7 +105,6 @@ def get_loss(dataset, weighted):
 
 
 def run(args):
-
     use_gpu = torch.cuda.is_available()
     model = None
 
@@ -120,50 +121,54 @@ def run(args):
         model = model.cuda()
 
     train_criterion = get_loss(train.dataset, args.train_weighted)
-    
+
     val_criterion = get_loss(val.dataset, args.valid_weighted)
 
     if args.optimizer == "adam":
         optimizer = optim.Adam(
-                       filter(lambda p: p.requires_grad, model.model_ft.parameters()),
-                       lr=args.lr,
-                       weight_decay=args.weight_decay)
+            filter(lambda p: p.requires_grad, model.model_ft.parameters()),
+            lr=args.lr,
+            weight_decay=args.weight_decay)
     elif args.optimizer == "rmsprop":
         optimizer = optim.RMSprop(
-                       filter(lambda p: p.requires_grad, model.model_ft.parameters()),
-                       lr=args.lr,
-                       weight_decay=args.weight_decay)
+            filter(lambda p: p.requires_grad, model.model_ft.parameters()),
+            lr=args.lr,
+            weight_decay=args.weight_decay)
     else:
         print("{} is not a valid optimizer.".format(args.optimizer))
 
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, threshold=0.001, factor=0.1)
     best_model_wts, best_loss = model.state_dict(), float("inf")
 
+    # f = open("test.txt", "a")
+    # for var in model.state_dict():
+    #     f.write(var+'\n')
+    # f.close()
+
     counter = 0
     for epoch in range(1, args.epochs + 1):
         print("Epoch {}/{}".format(epoch, args.epochs))
         print("-" * 10)
-        train_loss = train_epoch(epoch, args, model, train,train_criterion, optimizer)
+        train_loss = train_epoch(epoch, args, model, train, train_criterion, optimizer)
         _, epoch_auc, _, valid_loss = test_epoch(model, val, val_criterion, epoch)
         scheduler.step(valid_loss)
 
         if (valid_loss < best_loss):
             best_loss = valid_loss
             best_model_wts = model.state_dict()
-            counter = 0        
+            counter = 0
         else:
             counter += 1
 
         if counter > 3:
             break
 
-        torch.save(best_model_wts, os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
-        # shutil.copy('/content/GP/run_dir/{0}'.format(best_model_wts), '/content/drive/MyDrive/Epochs')
-
-
-        
+        torch.save(best_model_wts,
+                   os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
+        shutil.copy('/content/GP/run_dir/{}'.format(best_model_wts), '/content/drive/MyDrive/Epochs')
 
     print("Best Validation Loss:", best_loss)
+
 
 if __name__ == "__main__":
     """
@@ -185,4 +190,3 @@ if __name__ == "__main__":
     with open(os.path.join(args.save_path, "params.txt"), 'w') as out:
         json.dump(vars(args), out, indent=4)
     run(args)
-

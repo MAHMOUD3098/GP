@@ -69,6 +69,9 @@ def get_loader_on_split(args_dict, split):
 def optimal_threshold_compute(labels, probs):
     thresholds = []
     for i in range(probs.shape[1]):
+        # p=precision, r=recall, t=thresholds
+        # precision = tp/(tp+fp)
+        # recall = tp/(tp+fn)
         p, r, t = metrics.precision_recall_curve(labels[:, i], probs[:, i])
         threshold = t[np.nanargmax(2 * p * r / (p + r))-1]
         thresholds.append(threshold)
