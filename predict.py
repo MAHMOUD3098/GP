@@ -27,7 +27,7 @@ class Struct:
 
 def load_model(args, load_path, nclasses):
     model = DenseNet(args, nclasses)
-    model.load_state_dict(torch.load(load_path))
+    model.load_state_dict(torch.load(load_path), strict = False)
     model = model.cuda()
     model.eval()
     return model
@@ -73,7 +73,7 @@ def optimal_threshold_compute(labels, probs):
         # precision = tp/(tp+fp)
         # recall = tp/(tp+fn)
         p, r, t = metrics.precision_recall_curve(labels[:, i], probs[:, i])
-        threshold = t[np.nanargmax(2 * p * r / (p + r))-1]
+        threshold = t[np.nanargmax(2 * p * r / (p + r))]
         thresholds.append(threshold)
     thresholds = np.array(thresholds)
     print("Optimal thresholds at ", thresholds)
@@ -88,11 +88,10 @@ def predict_for_split(args_dicts, model_paths, split):
     labels = loaders[0].dataset.labels
 
     if 'valid' in split:
-        thresholds = optimal_threshold_compute(labels, probs)
-#        auc = metrics.roc_auc_score(labels, probs)
-#        print("AUC", auc)
-        name = 'auc - ' + split 
-#        name = str(auc) + '-' + split
+      thresholds = optimal_threshold_compute(labels, probs)
+      auc = metrics.roc_auc_score(labels, probs)
+      print("AUC", auc)
+      name = str(auc) + '-' + split
     else:
         name = split
         thresholds = None
