@@ -12,9 +12,10 @@ import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
 
-from DensenetModels import DenseNet121
-from DensenetModels import DenseNet169
-from DensenetModels import DenseNet201
+from densenet import densenet121
+from densenet import densenet169
+from densenet import densenet201
+from densenet import DenseNet
 
 #-------------------------------------------------------------------------------- 
 #---- Class to generate heatmaps (CAM)
@@ -26,20 +27,20 @@ class HeatmapGenerator ():
     #---- nnArchitecture - architecture name DENSE-NET121, DENSE-NET169, DENSE-NET201
     #---- nnClassCount - class count, 14 for chxray-14
 
- 
+    model = DenseNet()
     def __init__ (self, pathModel, nnArchitecture, nnClassCount, transCrop):
        
         #---- Initialize the network
-        if nnArchitecture == 'DENSE-NET-121': model = DenseNet121(nnClassCount, True).cuda()
-        elif nnArchitecture == 'DENSE-NET-169': model = DenseNet169(nnClassCount, True).cuda()
-        elif nnArchitecture == 'DENSE-NET-201': model = DenseNet201(nnClassCount, True).cuda()
+        if nnArchitecture == 'DENSE-NET-121': model = densenet121(False).cuda()
+        elif nnArchitecture == 'DENSE-NET-169': model = densenet169(False).cuda()
+        elif nnArchitecture == 'DENSE-NET-201': model = densenet201(False).cuda()
           
         model = torch.nn.DataParallel(model).cuda()
 
         modelCheckpoint = torch.load(pathModel)
-        model.load_state_dict(modelCheckpoint['state_dict'], strict=False)
+        model.load_state_dict(modelCheckpoint['best_model_wts'], strict=False)
 
-        self.model = model.module.densenet121.features
+        self.model = model.module.features
         self.model.eval()
         
         #---- Initialize the weights
@@ -91,12 +92,12 @@ class HeatmapGenerator ():
         
 #-------------------------------------------------------------------------------- 
 
-pathInputImage = 'test/00000013_012.png'
-pathOutputImage = 'test/heatmap1.png'
-pathModel = 'models/m-25012018-123527.pth.tar'
+pathInputImage = '/content/GP/test/00011997_003.png'
+pathOutputImage = '/content/GP/test/heatmap.png'
+pathModel = '/content/GP/checkpoint_val0.085970_train0.122693_epoch10'
 
 nnArchitecture = 'DENSE-NET-121'
-nnClassCount = 14
+nnClassCount = 6
 
 transCrop = 224
 
