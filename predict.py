@@ -14,6 +14,7 @@ from sklearn import metrics
 import util
 from train import transform_data, DenseNet
 from joblib import Memory
+import shutil
 
 
 memory = Memory(cachedir='./cache', verbose=0)
@@ -131,6 +132,7 @@ def predict(model_paths, split="valid", save=True):
         return probs, thresholds
 
 
+
 if __name__ == "__main__":
     """
     Usage
@@ -145,4 +147,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     predict(args.model_paths, save=True)
+
+    # save predictions
+    shutil.copytree('/content/GP/predictions', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions')
+
 

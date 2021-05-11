@@ -18,9 +18,7 @@ from torch.autograd import Variable
 from densenet import densenet121
 
 import util
-
 import shutil
-
 
 class DenseNet(nn.Module):
     def __init__(self, config, nclasses):
@@ -29,10 +27,8 @@ class DenseNet(nn.Module):
         num_ftrs = self.model_ft.classifier.in_features
         self.model_ft.classifier = nn.Linear(num_ftrs, nclasses)
         self.config = config
-
     def forward(self, x):
         return self.model_ft(x)
-
 
 def transform_data(data, use_gpu, train=False):
     inputs, labels = data
@@ -49,16 +45,16 @@ def train_epoch(epoch, args, model, loader, criterion, optimizer):
     model.train()
     batch_losses = []
     for batch_idx, data in enumerate(loader):
-        inputs, labels = transform_data(data, True, train=True)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels, epoch=epoch)
-        loss.backward()
-        optimizer.step()
-        print("Epoch: {:d} Batch: {:d} ({:d}) Train Loss: {:.6f}".format(
-            epoch, batch_idx, args.batch_size, loss.data))
-        sys.stdout.flush()
-        batch_losses.append(loss.data)
+      inputs, labels = transform_data(data, True, train=True)
+      optimizer.zero_grad()
+      outputs = model(inputs)
+      loss = criterion(outputs, labels, epoch=epoch)
+      loss.backward()
+      optimizer.step()
+      print("Epoch: {:d} Batch: {:d} ({:d}) Train Loss: {:.6f}".format(
+          epoch, batch_idx, args.batch_size, loss.data))
+      sys.stdout.flush()
+      batch_losses.append(loss.data)
     train_loss = torch.mean(torch.stack(batch_losses))
     print("Training Loss: {:.6f}".format(train_loss))
     return train_loss
@@ -89,6 +85,7 @@ def test_epoch(model, loader, criterion, epoch=1):
 
 
 def get_loss(dataset, weighted):
+
     criterion = nn.MultiLabelSoftMarginLoss()
 
     def loss(preds, target, epoch):
@@ -104,7 +101,44 @@ def get_loss(dataset, weighted):
     return loss
 
 
+def saveCheckpoint(model, best_model_wts, train_loss, val_loss, best_loss, optimizer, epoch):
+  print('Saving checkpoint...')
+
+  state = {
+    'model' : model,
+    'best_model_wts': best_model_wts,
+    'train_loss' : train_loss,
+    'val_loss' : val_loss,
+    'best_loss': best_loss,
+    'optimizer' : optimizer,
+    'epoch' : epoch
+  }
+
+  if not os.path.exists('/content/GP/checkpoints'):
+    os.makedirs('/content/GP/checkpoints')
+
+  torch.save(state, '/content/GP/checkpoints/checkpoint_val%f_train%f_epoch%d' % (val_loss, train_loss, epoch))
+  # shutil.copy('/content/GP/checkpoints/{}'.format("checkpoint_val%f_train%f_epoch%d" % (val_loss, train_loss, epoch)), '/content/drive/MyDrive/checkpoints')
+  shutil.copy('/content/GP/checkpoints/{}'.format("checkpoint_val%f_train%f_epoch%d" % (val_loss, train_loss, epoch)), '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Checkpoints')
+
+  print('checkpoint saved successfully to directory {checkpoints}!!')
+
+
+def loadCheckpoint():
+  checkPoints = os.listdir('/content/GP/checkpoints')
+  tmpMax = -1
+  for chkpnt in checkPoints:
+    if int(chkpnt[-1])>=tmpMax:
+      tmpMax = int(chkpnt[-1])
+      lastCheckpoint = chkpnt
+  
+  loaded_chkpnt = torch.load('/content/GP/checkpoints/{}'.format(lastCheckpoint))
+  return loaded_chkpnt
+
+
+
 def run(args):
+
     use_gpu = torch.cuda.is_available()
     model = None
 
@@ -121,51 +155,56 @@ def run(args):
         model = model.cuda()
 
     train_criterion = get_loss(train.dataset, args.train_weighted)
-
+    
     val_criterion = get_loss(val.dataset, args.valid_weighted)
 
     if args.optimizer == "adam":
         optimizer = optim.Adam(
-            filter(lambda p: p.requires_grad, model.model_ft.parameters()),
-            lr=args.lr,
-            weight_decay=args.weight_decay)
+                       filter(lambda p: p.requires_grad, model.model_ft.parameters()),
+                       lr=args.lr,
+                       weight_decay=args.weight_decay)
     elif args.optimizer == "rmsprop":
         optimizer = optim.RMSprop(
-            filter(lambda p: p.requires_grad, model.model_ft.parameters()),
-            lr=args.lr,
-            weight_decay=args.weight_decay)
+                       filter(lambda p: p.requires_grad, model.model_ft.parameters()),
+                       lr=args.lr,
+                       weight_decay=args.weight_decay)
     else:
         print("{} is not a valid optimizer.".format(args.optimizer))
 
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, threshold=0.001, factor=0.1)
-    best_model_wts, best_loss = model.state_dict(), float("inf")
 
-    # f = open("test.txt", "a")
-    # for var in model.state_dict():
-    #     f.write(var+'\n')
-    # f.close()
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, threshold=0.001, factor=0.1)
+
+    epochToStartFrom = 1
+    if os.path.exists('/content/GP/checkpoints'):
+      if(len(os.listdir('/content/GP/checkpoints'))) != 0:
+        loaded_chkpnt = loadCheckpoint()
+        model, best_model_wts, train_loss, val_loss, best_loss, optimizer, epochToStartFrom = loaded_chkpnt['model'], loaded_chkpnt['best_model_wts'], loaded_chkpnt['train_loss'], loaded_chkpnt['val_loss'], loaded_chkpnt['best_loss'], loaded_chkpnt['optimizer'], loaded_chkpnt['epoch']+1
+
+    else:
+      best_model_wts, best_loss = model.state_dict(), float("inf")
 
     counter = 0
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(epochToStartFrom, args.epochs + 1):
         print("Epoch {}/{}".format(epoch, args.epochs))
         print("-" * 10)
-        train_loss = train_epoch(epoch, args, model, train, train_criterion, optimizer)
+        train_loss = train_epoch(epoch, args, model, train,train_criterion, optimizer)
         _, epoch_auc, _, valid_loss = test_epoch(model, val, val_criterion, epoch)
         scheduler.step(valid_loss)
 
         if (valid_loss < best_loss):
             best_loss = valid_loss
             best_model_wts = model.state_dict()
-            counter = 0
+            counter = 0        
         else:
             counter += 1
 
         if counter > 3:
             break
 
-        torch.save(best_model_wts,
-                   os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
-        shutil.copy('/content/GP/run_dir/{}'.format(best_model_wts), '/content/drive/MyDrive/Epochs')
+        torch.save(best_model_wts, os.path.join(args.save_path, "val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)))
+        saveCheckpoint(model, best_model_wts, train_loss, valid_loss, best_loss, optimizer,epoch)
+
+        # shutil.copy('/content/GP/run_dir/{}'.format("val%f_train%f_epoch%d" % (valid_loss, train_loss, epoch)), '/content/drive/MyDrive/epochs')
 
     print("Best Validation Loss:", best_loss)
 
@@ -189,4 +228,13 @@ if __name__ == "__main__":
 
     with open(os.path.join(args.save_path, "params.txt"), 'w') as out:
         json.dump(vars(args), out, indent=4)
+
+    # save params file
+    shutil.copy('/content/GP/run_dir/params.txt', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2')
+
+    # load dataset files from dirve
+    shutil.copy('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Dataset/train.csv', '/content/GP/data')
+    shutil.copy('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Dataset/valid.csv', '/content/GP/data')
+
     run(args)
+
