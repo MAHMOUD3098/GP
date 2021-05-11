@@ -229,12 +229,16 @@ if __name__ == "__main__":
     with open(os.path.join(args.save_path, "params.txt"), 'w') as out:
         json.dump(vars(args), out, indent=4)
 
-    # save params file
-    shutil.copy('/content/GP/run_dir/params.txt', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2')
-
     # load dataset files from dirve
+    if not os.path.exists('/content/GP/data/'):
+      os.makedirs('/content/GP/data/')
+
     shutil.copy('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Dataset/train.csv', '/content/GP/data')
     shutil.copy('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Dataset/valid.csv', '/content/GP/data')
+
+
+    # save params file
+    shutil.copy('/content/GP/run_dir/params.txt', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2')
 
     run(args)
 
