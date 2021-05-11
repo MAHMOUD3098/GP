@@ -149,6 +149,13 @@ if __name__ == "__main__":
     predict(args.model_paths, save=True)
 
     # save predictions
-    shutil.copytree('/content/GP/predictions', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions')
+    if os.path.exists('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions'):
+      foldersInDrive = [folder for folder in os.listdir('/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions')]
+      foldersInColab = [folder for folder in os.listdir('/content/GP/predictions')]
 
+      for folder in foldersInColab:
+        if folder not in foldersInDrive:
+            shutil.copytree('/content/GP/predictions/{0}'.format(folder), '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions/{0}'.format(folder))
+    else:
+      shutil.copytree('/content/GP/predictions', '/content/drive/MyDrive/Chest_X-Ray_GP/Experiences/Experience_2/Predictions')
 
